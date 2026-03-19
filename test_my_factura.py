@@ -3,13 +3,15 @@ import requests
 import random
 from faker import Faker
 from datetime import datetime, timedelta
-
+from dotenv import load_dotenv
+import os
 fake = Faker()
 
 # ─── Config ───
 BASE_URL = "https://dev-cc.dev.gerniks.net"
-API_KEY  = "icFTh8Nx.34b7e7cce387539140adcd5726e08b2f46b00502bc90f2724e76774d7604e010"
 
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
 HEADERS = {
     "API-key": API_KEY,
     "Content-Type": "application/json"
