@@ -7,16 +7,19 @@ Automated API tests for My-Factura application using **pytest** and **requests**
 | Test Class | Tests | Description |
 |------------|-------|-------------|
 | `TestCreateConsumer` | 3 | Create consumer — positive, missing firstName, invalid IBAN |
-| `TestTransactionStatus` | 1 | New transaction has status NEW |
-| `TestDuplicateEmail` | 1 | Duplicate email validation |
-| `TestTransactionAmountEdgeCases` | 2 | Amount = 0 (bug), very large amount |
 | `TestGetConsumer` | 2 | Get by ID, nonexistent consumer |
-| `TestDuplicateIdExternal` | 1 | Duplicate idExternal validation |
 | `TestUpdateConsumer` | 1 | Update consumer fields |
+| `TestDuplicateIdExternal` | 1 | Duplicate idExternal validation |
+| `TestDuplicateEmail` | 1 | Duplicate email validation |
+| `TestTransactionStatus` | 1 | New transaction has status NEW |
+| `TestTransactionAmountEdgeCases` | 2 | Amount = 0 (bug), very large amount |
 | `TestConsumerAndTransaction` | 1 | End-to-end: create consumer + transaction |
 | `TestCreateTransaction` | 3 | Create, negative amount, missing consumer |
+| `TestGetTransactions` | 1 | Get transactions list |
+| `TestTransactionDueDate` | 2 | Due date in past, due date today |
+| `TestBulkCreateConsumers` | 1 | Bulk create 5 consumers |
 
-**Total: 15 tests**
+**Total: 19 tests**
 
 ## 🐛 Bugs Found
 
