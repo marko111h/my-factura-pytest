@@ -11,6 +11,7 @@ Automated API tests for the **My-Factura** application using **pytest** and **re
 | 1 | Invalid IBAN accepted — consumer created but bankAccount empty | POST /consumer | 201 |
 | 2 | Amount 0 accepted — transaction created with 0.00€ | POST /transaction | 201 |
 | 3 | Empty payload returns 500 instead of 400 | POST /consumer | 500 |
+| 4 | Very long description (1000+ chars) breaks UI table layout | POST /transaction | 201 |
 
 ---
 
