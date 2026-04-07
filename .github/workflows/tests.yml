@@ -1,10 +1,12 @@
-name: API Tests
+name: My-Factura API Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 8 * * 1-5'  # svaki radni dan u 8:00
 
 jobs:
   test:
@@ -23,6 +25,21 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run tests
-        run: pytest tests/ -v
         env:
           API_KEY: ${{ secrets.API_KEY }}
+        run: pytest tests/ -v --tb=short
+
+      - name: Generate HTML report
+        if: always()
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          pip install pytest-html
+          pytest tests/ -v --html=report.html --self-contained-html
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: report.html
