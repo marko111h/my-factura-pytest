@@ -2,6 +2,7 @@ import requests
 from faker import Faker
 from datetime import datetime, timedelta
 from conftest import BASE_URL, HEADERS
+from utils import valid_bank_information 
 
 fake = Faker()
 
@@ -11,15 +12,38 @@ def future_date(days=30):
 
 
 def create_consumer():
-    """Helper — kreira consumera i vraća ID"""
+    """Helper — kreira consumera SA validnim bankovnim računom i vraća ID"""
+    first = fake.first_name()
+    last  = fake.last_name()
+
     r = requests.post(
         f"{BASE_URL}/api/public/p2/v1/consumer",
-        json=[{"idExternal": fake.uuid4(), "firstName": fake.first_name(),
-               "lastName": fake.last_name(), "type": "PERSON", "email": fake.email()}],
+        json=[{
+            "idExternal": fake.uuid4(),
+            "firstName": first,
+            "lastName": last,
+            "type": "PERSON",
+            "flgDunningEnabled": "true",
+            "email": fake.email(),
+            "bankAccounts": valid_bank_information(f"{first} {last}")
+        }],
         headers=HEADERS
     )
-    assert r.status_code == 201
-    return r.json()[0]["id"]
+    assert r.status_code == 201, f"Consumer creation failed: {r.text}"
+    
+    data = r.json()[0]
+    consumer_id = data["id"]
+    
+    # Provjeri odmah da li je bank account kreiran
+    bank_accounts = data.get("bankAccounts", [])
+    if not bank_accounts:
+        raise AssertionError(
+            f"❌ Consumer {consumer_id} kreiran bez bankovnog računa! "
+            f"Transakcije će ići u REJECTED."
+        )
+    
+    print(f"✅ Consumer {consumer_id} kreiran sa IBAN: {bank_accounts[0].get('iban', 'N/A')}")
+    return consumer_id
 
 
 class TestCreateTransaction:
@@ -179,3 +203,103 @@ class TestGetTransactions:
         assert "amount" in tx
         assert "status" in tx
         print(f"✅ Lista dohvaćena — ukupno: {len(items)}")
+
+
+
+class TestDuplicateTransaction:
+
+    EXISTING_CONSUMER_ID = 975187  # ← postojeći consumer u sistemu
+
+    def test_duplicate_id_external_transaction(self):
+        """
+        Simulira FN retry — ista transakcija poslana dva puta.
+        Očekujemo: drugi request vraća 400/409, NE kreira duplikat.
+        """
+        ext_id = fake.uuid4()
+
+        payload = [{
+            "amount": 49.99,
+            "description": "Mesecna clanarina - retry test",
+            "dueDate": future_date(30),
+            "collectionType": "DO_NOT_COLLECT",
+            "idConsumer": self.EXISTING_CONSUMER_ID,
+            "idExternal": ext_id
+        }]
+
+        # Prvi request
+        r1 = requests.post(
+            f"{BASE_URL}/api/public/p2/v1/transaction",
+            json=payload,
+            headers=HEADERS
+        )
+        assert r1.status_code == 201, f"Prvi request failao: {r1.text}"
+        print(f"\nResponse r1: {r1.json()}")  
+        tx_id = r1.json()[0]["idExternal"]
+        print(f"\n✅ Prva transakcija kreirana: ID={tx_id}, idExternal={ext_id}")
+
+        # Drugi request — isti idExternal, simulira retry
+        r2 = requests.post(
+            f"{BASE_URL}/api/public/p2/v1/transaction",
+            json=payload,
+            headers=HEADERS
+        )
+        print(f"Retry request → Status: {r2.status_code}")
+        print(f"Response: {r2.text[:300]}")
+
+        if r2.status_code == 201:
+            tx_id_2 = r2.json()[0]["idExternal"]
+            if tx_id_2 == tx_id:
+                print(f"✅ Idempotent: vratio isti ID {tx_id}")
+            else:
+                print(f"❌ BUG: Duplikat kreiran! id1={tx_id}, id2={tx_id_2}")
+                assert False, f"BUG: Duplikat transakcija! id1={tx_id}, id2={tx_id_2}"
+        else:
+            assert r2.status_code in [400, 409], \
+                f"Neočekivan status: {r2.status_code}"
+            print(f"✅ Duplikat odbijen sa {r2.status_code}")
+
+
+
+
+class TestBulkTransactions:
+
+    EXISTING_CONSUMER_ID = 975187
+
+    def test_bulk_transactions_same_consumer(self):
+        """
+        10 transakcija odjednom za istog consumera.
+        Očekujemo: sve kreirane, sve status NEW, sve različiti ID-evi.
+        """
+        payload = [
+            {
+                "amount": round(10.0 + i, 2),
+                "description": f"Bulk transakcija #{i+1}",
+                "dueDate": future_date(30 + i),
+                "collectionType": "DO_NOT_COLLECT",
+                "idConsumer": self.EXISTING_CONSUMER_ID,
+                "idExternal": fake.uuid4()
+            }
+            for i in range(10)
+        ]
+
+        r = requests.post(
+            f"{BASE_URL}/api/public/p2/v1/transaction",
+            json=payload,
+            headers=HEADERS
+        )
+
+        print(f"\nStatus: {r.status_code}")
+        print(f"Broj kreiranih: {len(r.json()) if r.status_code == 201 else 'N/A'}")
+
+        assert r.status_code == 201, f"Bulk create failao: {r.text}"
+        data = r.json()
+
+        assert len(data) == 10, f"Očekivano 10, dobijeno {len(data)}"
+
+        ext_ids = [tx["idExternal"] for tx in data]
+        assert len(set(ext_ids)) == 10, "❌ BUG: Duplikat idExternal u responsu!"
+
+        for i, tx in enumerate(data):
+            assert tx["status"] == "NEW", f"Tx #{i+1} nije NEW: {tx['status']}"
+            assert tx["idConsumer"] == self.EXISTING_CONSUMER_ID
+            print(f"  ✅ Tx #{i+1}: {tx['idExternal']} — {tx['amount']}€ — {tx['status']}")

@@ -2,6 +2,7 @@ import requests
 import random
 from faker import Faker
 from conftest import BASE_URL, HEADERS
+from utils import valid_bank_information
 
 fake = Faker()
 
@@ -28,7 +29,7 @@ class TestCreateConsumer:
                 "flgDunningEnabled": "true",
                 "gender": "MALE",
                 "email": fake.email(),
-                "bankInformation": {"iban": random_iban(), "accountOwner": f"{first} {last}"}
+                "bankAccounts": valid_bank_information(f"{first} {last}")
             }],
             headers=HEADERS
         )
@@ -37,7 +38,8 @@ class TestCreateConsumer:
         assert data["firstName"] == first
         assert data["lastName"] == last
         assert data["status"] == "ACTIVE"
-        print(f"✅ Consumer kreiran: {first} {last}, ID: {data['id']}")
+        assert len(data.get("bankAccounts", [])) > 0, "❌ BUG: bankAccount nije kreiran!"
+        print(f"✅ Consumer kreiran sa bankovnim računom: {first} {last}")
 
     def test_create_consumer_missing_firstname(self):
         """POST /consumer — bez firstName treba failati"""
@@ -64,9 +66,11 @@ class TestCreateConsumer:
             }],
             headers=HEADERS
         )
+       # Dokumentujemo bug — API vraća 201 ali prazan bankAccounts
         assert r.status_code == 201
-        assert r.json()[0]["bankAccounts"] == []
-        print(f"⚠️ BUG: Invalid IBAN prihvaćen ali bankAccount prazan")
+        assert r.json()[0].get("bankAccounts", []) == [], \
+            "Neočekivano: nevažeći IBAN je prihvaćen!"
+        print("⚠️ BUG potvrđen: Invalid IBAN → consumer kreiran, bankAccounts = []")
 
     def test_create_consumer_special_characters(self):
         """POST /consumer — specijalni karakteri u imenu"""
