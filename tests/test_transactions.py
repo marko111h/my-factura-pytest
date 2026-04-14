@@ -303,3 +303,6 @@ class TestBulkTransactions:
             assert tx["status"] == "NEW", f"Tx #{i+1} nije NEW: {tx['status']}"
             assert tx["idConsumer"] == self.EXISTING_CONSUMER_ID
             print(f"  ✅ Tx #{i+1}: {tx['idExternal']} — {tx['amount']}€ — {tx['status']}")
+
+
+            

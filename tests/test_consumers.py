@@ -210,3 +210,47 @@ class TestBulkCreateConsumers:
         for c in data:
             assert c["status"] == "ACTIVE"
         print(f"✅ Bulk create — svih 5 kreirano!")
+
+
+
+class TestCreateCompanyConsumer:
+
+    def test_create_company_consumer(self):
+        """POST /consumer — kreira COMPANY consumera"""
+        company = fake.company()
+
+        r = requests.post(
+            f"{BASE_URL}/api/public/p2/v1/consumer",
+            json=[{
+                "idExternal": fake.uuid4(),
+                "companyName": company,
+                "type": "COMPANY",
+                "flgDunningEnabled": "true",
+                "email": fake.email(),
+                "bankAccounts": valid_bank_information(company)
+            }],
+            headers=HEADERS
+        )
+        print(f"\nStatus: {r.status_code}")
+        print(f"Response: {r.json()}")
+
+        assert r.status_code == 201
+        data = r.json()[0]
+        assert data["status"] == "ACTIVE"
+        assert len(data.get("bankAccounts", [])) > 0, "❌ BUG: bankAccount nije kreiran!"
+        print(f"✅ Company consumer kreiran: {company}")
+
+    def test_create_company_without_company_name(self):
+        """COMPANY bez companyName — treba failati"""
+        r = requests.post(
+            f"{BASE_URL}/api/public/p2/v1/consumer",
+            json=[{
+                "idExternal": fake.uuid4(),
+                "type": "COMPANY",
+                "email": fake.email()
+            }],
+            headers=HEADERS
+        )
+        print(f"\nStatus: {r.status_code} — {r.text[:200]}")
+        assert r.status_code in [400, 422]
+        print(f"✅ COMPANY bez naziva odbijen: {r.status_code}")
