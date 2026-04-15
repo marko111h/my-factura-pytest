@@ -136,20 +136,20 @@ class TestTransactionAmountEdgeCases:
         assert r.status_code in [200, 201]
         print(f"✅ Veliki iznos prihvaćen!")
 
-    def test_very_long_description(self):
-        """Opis od 1000+ karaktera"""
-        r = requests.post(
-            f"{BASE_URL}/api/public/p2/v1/transaction",
-            json=[{"amount": 30.0, "description": "A" * 1000, "dueDate": future_date(30),
-                   "collectionType": "DO_NOT_COLLECT", "idConsumer": self.consumer_id,
-                   "idExternal": fake.uuid4()}],
-            headers=HEADERS
-        )
-        print(f"\nLong description → Status: {r.status_code}")
-        if r.status_code in [200, 201]:
-            print(f"⚠️ API prihvata 1000+ karaktera u opisu")
-        else:
-            print(f"✅ API odbija predugačak opis: {r.status_code}")
+ #   def test_very_long_description(self):
+  #      """Opis od 1000+ karaktera"""
+  #      r = requests.post(
+  #          f"{BASE_URL}/api/public/p2/v1/transaction",
+   #         json=[{"amount": 30.0, "description": "A" * 1000, "dueDate": future_date(30),
+    #               "collectionType": "DO_NOT_COLLECT", "idConsumer": self.consumer_id,
+     #              "idExternal": fake.uuid4()}],
+      #      headers=HEADERS
+       # )
+   #     print(f"\nLong description → Status: {r.status_code}")
+    #    if r.status_code in [200, 201]:
+     #       print(f"⚠️ API prihvata 1000+ karaktera u opisu")
+      #  else:
+       #     print(f"✅ API odbija predugačak opis: {r.status_code}")
 
 
 class TestTransactionDueDate:

@@ -16,6 +16,7 @@ Automated API tests for the **My-Factura** application using **pytest** and **re
 | 6 | `flgPrimary` typo in API — correct field name is `flgPrimaty` | POST /consumer | - |
 | 7 | Duplicate transaction returns `UNKNOWN_ERROR_CODE` instead of specific error code | POST /transaction | 400 |
 | 8 | Transaction response missing `id` field — only `idExternal` returned | POST /transaction | 201 |
+| 9 | Long description (1000+ chars) accepted — test commented out, no validation on description length | POST /transaction | 201 |
 
 ---
 
