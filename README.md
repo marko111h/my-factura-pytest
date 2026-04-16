@@ -17,6 +17,7 @@ Automated API tests for the **My-Factura** application using **pytest** and **re
 | 7 | Duplicate transaction returns `UNKNOWN_ERROR_CODE` instead of specific error code | POST /transaction | 400 |
 | 8 | Transaction response missing `id` field — only `idExternal` returned | POST /transaction | 201 |
 | 9 | Long description (1000+ chars) accepted — test commented out, no validation on description length | POST /transaction | 201 |
+| 10 | Duplicate idExternal with different amount returns `UNKNOWN_ERROR_CODE` instead of `DUPLICATE_EXTERNAL_ID` | POST /transaction | 400 |
 
 ---
 
@@ -54,6 +55,7 @@ Automated API tests for the **My-Factura** application using **pytest** and **re
 | `test_get_transactions_list` | Fetches transaction list and validates structure |
 | `test_duplicate_id_external_transaction` | ✅ FN retry scenario — duplicate idExternal rejected with 400 |
 | `test_bulk_transactions_same_consumer` | 10 transactions at once for same consumer — all NEW |
+| `test_duplicate_same_external_different_amount` | ⚠️ BUG: Duplicate idExternal with different amount rejected with 400 — `errorsCode` returns `UNKNOWN_ERROR_CODE` instead of `DUPLICATE_EXTERNAL_ID` |
 
 **Total: 23 tests**
 
@@ -67,6 +69,7 @@ Automated API tests for the **My-Factura** application using **pytest** and **re
 - `POST /transaction` response does not return `id` — use `idExternal` for tracking
 - Duplicate `idExternal` on transaction correctly returns 400 (idempotency works)
 - Bulk create supports up to 10 transactions per request for same consumer
+- Duplicate `idExternal` with different amount correctly rejected with 400, but `errorsCode` is always `UNKNOWN_ERROR_CODE` regardless of error type
 
 ---
 
