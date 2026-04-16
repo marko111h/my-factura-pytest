@@ -259,6 +259,57 @@ class TestDuplicateTransaction:
             print(f"✅ Duplikat odbijen sa {r2.status_code}")
 
 
+    def test_duplicate_same_external_different_amount(self):
+        """
+        Isti idExternal, ali različit amount.
+        Pita se: da li API ažurira transakciju ili odbija?
+            """
+        ext_id = fake.uuid4()
+
+        payload_1 = [{
+            "amount": 49.99,
+            "description": "Originalna transakcija",
+            "dueDate": future_date(30),
+            "collectionType": "DO_NOT_COLLECT",
+            "idConsumer": self.EXISTING_CONSUMER_ID,
+            "idExternal": ext_id
+        }]
+
+        payload_2 = [{
+            "amount": 99.99,  # ← drugačiji amount, isti idExternal
+            "description": "Retry sa drugačijim iznosom",
+            "dueDate": future_date(30),
+            "collectionType": "DO_NOT_COLLECT",
+            "idConsumer": self.EXISTING_CONSUMER_ID,
+            "idExternal": ext_id
+        }]
+
+        r1 = requests.post(f"{BASE_URL}/api/public/p2/v1/transaction", json=payload_1, headers=HEADERS)
+        assert r1.status_code == 201
+        print(f"\n✅ Prva transakcija: {r1.json()[0]['amount']}€")
+
+        r2 = requests.post(f"{BASE_URL}/api/public/p2/v1/transaction", json=payload_2, headers=HEADERS)
+        print(f"Drugi request → Status: {r2.status_code}")
+        print(f"Error response: {r2.text}")
+
+        if r2.status_code == 201:
+            amount_returned = r2.json()[0]["amount"]
+            if amount_returned == 49.99:
+                print("✅ Idempotent: vratio originalnu vrijednost 49.99€")
+            elif amount_returned == 99.99:
+                print("❌ BUG: Amount ažuriran na 99.99€ — nije idempotent!")
+                assert False, "BUG: idExternal nije idempotency key za amount!"
+        else:
+            assert r2.status_code in [400, 409], f"Neočekivan status: {r2.status_code}"
+            error_body = r2.json()
+            assert "duplicate" in error_body.get("message", "").lower(), \
+                f"Neočekivan error message: {error_body}"
+            assert error_body.get("errorsCode") == "UNKNOWN_ERROR_CODE", \
+                "⚠️ BUG: errorsCode bi trebao biti DUPLICATE_EXTERNAL_ID"
+            print(f"✅ Duplikat odbijen sa {r2.status_code}")
+            print(f"⚠️ BUG potvrđen: errorsCode = UNKNOWN_ERROR_CODE umesto DUPLICATE_EXTERNAL_ID")
+
+
 
 
 class TestBulkTransactions:
